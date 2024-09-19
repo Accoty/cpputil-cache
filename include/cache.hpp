@@ -20,7 +20,7 @@ class Cache {
     std::string name_;
 };
 
-class WTinyWindowCache : public Cache {
+class WTinyWindowLFU : public Cache {
 
 };
 
