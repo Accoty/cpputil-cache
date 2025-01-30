@@ -22,7 +22,26 @@ bool check_equal(List& a, std::vector<T>&& b) {
 }
 
 TEST(ListTest, PushAndPop) {
-
+    cpputil::list::List<int> list;
+    for (int i = 100; i < 200; i++) {
+        list.PushBack(i);
+    }
+    for (int i = 0; i < 99; i++) {
+        list.PopBack();
+    }
+    ASSERT_EQ(*list.begin(), 100);
+    cpputil::list::List<double> double_list;
+    for (int i = 100; i < 200; i++) {
+        double_list.PushBack(i);
+    }
+    for (int i = 0; i < 49; i++) {
+        double_list.PopBack();
+        double_list.PopFront();
+    }
+    ASSERT_EQ(int(*double_list.begin() + 0.5), 149);
+    auto it = double_list.end();
+    --it;
+    ASSERT_EQ(int(*it + 0.5), 150);
 }
 
 TEST(ListTest, For) {

@@ -5,7 +5,8 @@ namespace cpputil {
 
 namespace common {
 
-static unsigned int global_rand();
+uint64_t GlobalRand();
 
 } // common
+
 } // cpputil

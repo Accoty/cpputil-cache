@@ -16,7 +16,7 @@ template <typename T>
 struct Node {
     Node() = default;
     Node(T&& value) {
-        value = std::move(value);
+        this->value = std::move(value);
     }
     Node(const T& value) {
         this->value = value;
@@ -84,14 +84,13 @@ class List {
     ~List() {
         std::vector<Node<T>*> nodes;
         nodes.reserve(size_ + 1);
-        // nodes.reserve(size_ + 1);
-        // nodes.emplace_back(dummy_);
-        // for (auto i = dummy_->nxt; i != dummy_; i = i->nxt) {
-        //     nodes.emplace_back(i);
-        // }
-        // for (auto x : nodes) {
-        //     delete x;
-        // }
+        nodes.emplace_back(dummy_);
+        for (auto i = dummy_->nxt; i != dummy_; i = i->nxt) {
+            nodes.emplace_back(i);
+        }
+        for (auto x : nodes) {
+            delete x;
+        }
     }
     static NodeBuilder NodeBuilder() {
         return NodeBuilder();
