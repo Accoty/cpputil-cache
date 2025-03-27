@@ -1,7 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -14,14 +16,19 @@ struct Void {};
 
 template <typename T>
 struct Node {
+    struct PassBy { // use & for > 16 bit size object
+        using type = typename std::conditional<(sizeof(T) > (sizeof(void*) << 1)) || !std::is_trivially_copyable_v<T>, T&, T>::type;
+    };
     Node() = default;
+    template <typename U = T, typename std::enable_if<!std::is_same_v<U, typename PassBy::type>, int>::type = 0>
     Node(T&& value) {
         this->value = std::move(value);
     }
-    Node(const T& value) {
+    Node(const typename PassBy::type value) {
         this->value = value;
     }
     T value;
+    std::atomic_size_t promotions{0};
     Node *nxt = nullptr;
     Node *pre = nullptr;
 };
@@ -31,7 +38,7 @@ class ListView;
 
 template <typename T>
 class List {
-  public:
+public:
     struct NodeBuilder {
         Node<T>* Build(T&& value) {
             return new Node<T>(std::forward<T>(value));
@@ -95,79 +102,95 @@ class List {
     static NodeBuilder NodeBuilder() {
         return NodeBuilder();
     }
-    void PushFront(T&& value) {
+    inline Node<T>* PushFront(T&& value) {
         Node<T>* new_node = new Node<T>(std::move(value));
         new_node->nxt = dummy_->nxt;
         new_node->pre = dummy_;
         dummy_->nxt->pre = new_node;
         dummy_->nxt = new_node;
         ++size_;
+        return new_node;
     }
-    void PushFront(const T& value) {
+    inline Node<T>* PushFront(const T& value) {
         Node<T>* new_node = new Node<T>(value);
         new_node->nxt = dummy_->nxt;
         new_node->pre = dummy_;
         dummy_->nxt->pre = new_node;
         dummy_->nxt = new_node;
         ++size_;
+        return new_node;
     }
-    void PushBack(const T& value) {
+    inline Node<T>* PushBack(const T& value) {
         Node<T>* new_node = new Node<T>(value);
         new_node->pre = dummy_->pre;
         new_node->nxt = dummy_;
         dummy_->pre->nxt = new_node;
         dummy_->pre = new_node;
         ++size_;
+        return new_node;
     }
-    void PushBack(T&& value) {
+    inline Node<T>* PushBack(T&& value) {
         Node<T>* new_node = new Node<T>(std::forward<T>(value));
         new_node->pre = dummy_->pre;
         new_node->nxt = dummy_;
         dummy_->pre->nxt = new_node;
         dummy_->pre = new_node;
         ++size_;
+        return new_node;
     }
-    std::unique_ptr<Node<T>> PopFront() {
+    inline std::unique_ptr<Node<T>> PopFront() {
         if (!size_) {
             return nullptr;
         }
         --size_;
         return std::unique_ptr<Node<T>>(Extract(dummy_->nxt));
     }
-    std::unique_ptr<Node<T>> PopBack() {
+    inline std::unique_ptr<Node<T>> PopBack() {
         if (!size_) {
             return nullptr;
         }
         --size_;
         return std::unique_ptr<Node<T>>(Extract(dummy_->pre));
     }
-    void Insert(Node<T>* node, T&& value) {
+    /*
+    * @attention: size_ not change
+    */
+    inline void InsertFront(Node<T>* node) {
+        node->nxt = dummy_->nxt;
+        node->pre = dummy_;
+        dummy_->nxt->pre = node;
+        dummy_->nxt = node;
+    }
+    inline void Insert(Node<T>* node, T&& value) {
         Node<T>* new_node = new Node<T>(std::move(value));
         new_node->nxt = node->nxt;
         new_node->pre = node;
         node->nxt = new_node;
     }
-    void Insert(Node<T>* node, const T& value) {
+    inline void Insert(Node<T>* node, const T& value) {
         Node<T>* new_node = new Node<T>(std::forward<T>(value));
         new_node->nxt = node->nxt;
         new_node->pre = node;
         node->nxt = new_node;
     }
-    static Node<T>* Extract(Node<T>* node) {
+    /*
+    * @attention: size_ not change
+    */
+    inline static Node<T>* Extract(Node<T>* node) {
         node->pre->nxt = node->nxt;
         node->nxt->pre = node->pre;
         return node;
     }
-    size_t size() const {
+    inline size_t size() const {
         return size_;
     }
-    Iterator begin() const {
+    inline Iterator begin() const {
         return Iterator(dummy_->nxt);   
     }
-    Iterator end() const {
+    inline Iterator end() const {
         return Iterator(dummy_);
     }
-  private:
+private:
     friend ListView<T, List<T>>;
     Node<T>* dummy_;
     size_t size_ = 0;
